@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가상 실험실: 빛의 굴절 (Chromebook Opt.)</title>
+    <style>
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 10px;
+            user-select: none;
+            overflow: hidden;
+        }
+        h1 { margin: 5px 0; color: #333; font-size: 20px; }
+        
+        #ui-panel {
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border-left: 5px solid #2196f3;
+            text-align: left;
+            width: 800px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .step-title { font-weight: bold; color: #1565c0; font-size: 1.1em; margin-bottom: 4px; }
+        .instruction { font-size: 0.95em; color: #333; line-height: 1.3; }
+        .btn-group { margin-top: 8px; display: flex; gap: 10px; }
+        button {
+            padding: 6px 18px; font-size: 14px; font-weight: bold;
+            background-color: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer;
+        }
+        #toggle-dir-btn { background-color: #ff9800; display: none; }
+        
+        #lab-container {
+            position: relative; background: #fff; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 10px; text-align: center;
+        }
+        canvas {
+            background: #fff; border: 2px solid #dee2e6; border-radius: 8px;
+            cursor: crosshair; touch-action: none; 
+        }
+        
+        .quiz-input {
+            text-align: center; font-size: 13px; border: 2px solid #ccc;
+            border-radius: 4px; padding: 4px; box-sizing: border-box;
+            font-family: 'Pretendard', sans-serif; font-weight: bold;
+            outline: none; background: rgba(255, 255, 255, 0.9);
+        }
+        .quiz-mark { font-size: 18px; font-weight: bold; }
+        
+        #status-board {
+            display: flex; justify-content: center; gap: 30px;
+            margin-top: 8px; font-size: 1em; font-weight: bold;
+        }
+        .val-box { 
+            background: #f8f9fa; padding: 8px 20px; border-radius: 8px; 
+            border: 2px solid #e0e0e0; width: 120px;
+        }
+        .inc-text { color: #d32f2f; }
+        .refrac-text { color: #2e7d32; }
+    </style>
+</head>
+<body>
+
+    <h1>🔍 빛의 굴절 가상 실험실</h1>
+    
+    <div id="ui-panel">
+        <div class="step-title" id="step-title">1단계: 각 부분 명칭 입력하기</div>
+        <div class="instruction" id="instruction">
+            빈칸에 알맞은 용어를 타이핑하세요.<br>
+            <span style='font-size:0.85em; color:#666;'>※ 힌트: 입사광선, 굴절광선, 법선, 입사각, 굴절각</span>
+        </div>
+        <div class="btn-group">
+            <button id="action-btn" onclick="checkQuiz()">정답 확인하기</button>
+            <button id="toggle-dir-btn" onclick="toggleDirection()">🔄 진행 방향 바꾸기</button>
+        </div>
+    </div>
+
+    <div id="lab-container">
+        <div style="position: relative; display: inline-block;">
+            <canvas id="labCanvas" width="800" height="420"></canvas>
+            
+            <div id="quiz-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                <!-- 법선 -->
+                <div style="position: absolute; left: 355px; top: 20px; display: flex; align-items: center; gap: 4px; pointer-events: auto;">
+                    <input type="text" id="q-normal" class="quiz-input" placeholder="입력" style="width: 75px;">
+                    <span id="mark-normal" class="quiz-mark"></span>
+                </div>
+                <!-- 입사광선 (R_LASER=190에 맞춰 위치 이동) -->
+                <div style="position: absolute; left: 210px; top: 75px; display: flex; align-items: center; gap: 4px; pointer-events: auto;">
+                    <input type="text" id="q-inc-ray" class="quiz-input" placeholder="입력" style="width: 85px;">
+                    <span id="mark-inc-ray" class="quiz-mark"></span>
+                </div>
+                <!-- 굴절광선 (R_LASER=190에 맞춰 위치 이동) -->
+                <div style="position: absolute; left: 480px; top: 340px; display: flex; align-items: center; gap: 4px; pointer-events: auto;">
+                    <input type="text" id="q-refrac-ray" class="quiz-input" placeholder="입력" style="width: 85px;">
+                    <span id="mark-refrac-ray" class="quiz-mark"></span>
+                </div>
+                <!-- 입사각 -->
+                <div style="position: absolute; left: 305px; top: 130px; display: flex; align-items: center; gap: 4px; pointer-events: auto;">
+                    <input type="text" id="q-inc-angle" class="quiz-input" placeholder="입력" style="width: 75px;">
+                    <span id="mark-inc-angle" class="quiz-mark"></span>
+                </div>
+                <!-- 굴절각 -->
+                <div style="position: absolute; left: 420px; top: 280px; display: flex; align-items: center; gap: 4px; pointer-events: auto;">
+                    <input type="text" id="q-refrac-angle" class="quiz-input" placeholder="입력" style="width: 75px;">
+                    <span id="mark-refrac-angle" class="quiz-mark"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="status-board" style="display: none;">
+            <div class="val-box" style="border-color: #ffcdd2;">입사각: <span id="val-inc" class="inc-text">0</span>°</div>
+            <div class="val-box" style="border-color: #c8e6c9;">굴절각: <span id="val-refrac" class="refrac-text">0</span>°</div>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('labCanvas');
+    const ctx = canvas.getContext('2d');
+    const stepTitle = document.getElementById('step-title');
+    const instruction = document.getElementById('instruction');
+    const actionBtn = document.getElementById('action-btn');
+    const toggleDirBtn = document.getElementById('toggle-dir-btn');
+    const quizContainer = document.getElementById('quiz-container');
+    const statusBoard = document.getElementById('status-board');
+    
+    // 크롬북 최적화 좌표
+    const CX = 400; 
+    const CY = 220; 
+    const R_PROTRACTOR = 180; 
+    const R_LASER = 190; // 수정됨: 280 -> 190으로 줄여 화면 밖으로 나가지 않음
+
+    let step = 1;
+    let isDragging = false;
+    let incAngle = 45; 
+    let isReversed = false; 
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 배경
+        ctx.fillStyle = 'rgba(173, 216, 230, 0.4)'; 
+        ctx.fillRect(0, CY, canvas.width, canvas.height - CY);
+        ctx.fillStyle = '#90caf9';
+        ctx.fillRect(0, CY, canvas.width, 3); 
+
+        ctx.font = 'bold 14px Pretendard';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#757575';
+        ctx.fillText('☁️ 공기 (빠름)', 20, 25);
+        ctx.fillStyle = '#1976d2';
+        ctx.fillText('💧 물 (느림)', 20, CY + 25);
+
+        drawProtractor();
+
+        // 법선
+        ctx.beginPath();
+        ctx.moveTo(CX, 20); ctx.lineTo(CX, canvas.height - 20);
+        ctx.setLineDash([8, 6]); ctx.strokeStyle = '#424242'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+        
+        if (step !== 1) { 
+            ctx.fillStyle = '#424242'; ctx.textAlign = 'center';
+            ctx.fillText('법선', CX, isReversed ? canvas.height - 10 : 15);
+        }
+
+        drawRays();
+    }
+
+    function drawProtractor() {
+        ctx.beginPath(); ctx.arc(CX, CY, R_PROTRACTOR, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; ctx.fill();
+        ctx.strokeStyle = '#cfd8dc'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#999';
+
+        for (let a = 0; a < 360; a += 10) {
+            let rad = a * Math.PI / 180;
+            let r1 = R_PROTRACTOR - 10;
+            let x1 = CX + Math.sin(rad) * r1; let y1 = CY - Math.cos(rad) * r1;
+            let x2 = CX + Math.sin(rad) * R_PROTRACTOR; let y2 = CY - Math.cos(rad) * R_PROTRACTOR;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+            if (a % 30 === 0) {
+                let textAngle = a > 180 ? 360 - a : a; 
+                if (textAngle > 90) textAngle = 180 - textAngle;
+                let tx = CX + Math.sin(rad) * (R_PROTRACTOR - 22);
+                let ty = CY - Math.cos(rad) * (R_PROTRACTOR - 22);
+                ctx.font = '11px Arial';
+                ctx.fillText(Math.abs(textAngle).toString(), tx, ty);
+            }
+        }
+    }
+
+    function drawRays() {
+        let radInc = incAngle * Math.PI / 180;
+        let dirMult = isReversed ? -1 : 1; 
+        let refracAngle = isReversed ? Math.round(incAngle * 1.3) : Math.round(incAngle * 0.7);
+        let radRefrac = refracAngle * Math.PI / 180;
+
+        let lx = CX - Math.sin(radInc) * R_LASER;
+        let ly = CY - (Math.cos(radInc) * R_LASER * dirMult);
+        let tx = CX + Math.sin(radRefrac) * R_LASER;
+        let ty = CY + (Math.cos(radRefrac) * R_LASER * dirMult);
+
+        // 광선 그리기
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(CX, CY);
+        ctx.strokeStyle = 'rgba(211, 47, 47, 0.85)'; ctx.stroke();
+
+        ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(tx, ty);
+        ctx.strokeStyle = 'rgba(46, 125, 50, 0.85)'; ctx.stroke();
+
+        // 각도 호
+        let arcR = 60;
+        let startN = isReversed ? Math.PI/2 : -Math.PI/2;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(CX, CY, arcR, startN, startN - (radInc * dirMult), dirMult > 0);
+        ctx.strokeStyle = '#d32f2f'; ctx.stroke();
+        
+        let refracN = isReversed ? -Math.PI/2 : Math.PI/2;
+        ctx.beginPath(); ctx.arc(CX, CY, arcR, refracN, refracN - (radRefrac * dirMult), dirMult > 0);
+        ctx.strokeStyle = '#2e7d32'; ctx.stroke();
+
+        if (step !== 1) {
+            ctx.font = 'bold 14px Pretendard'; ctx.textAlign = 'center';
+            let midInc = startN - (radInc/2 * dirMult);
+            ctx.fillStyle = '#c62828';
+            ctx.fillText('입사각', CX + Math.cos(midInc)*(arcR+25), CY + Math.sin(midInc)*(arcR+25));
+            let midRefrac = refracN - (radRefrac/2 * dirMult);
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillText('굴절각', CX + Math.cos(midRefrac)*(arcR+25), CY + Math.sin(midRefrac)*(arcR+25));
+        }
+
+        // 레이저 본체
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(isReversed ? (-radInc - Math.PI/2) : (-radInc + Math.PI/2)); 
+        ctx.fillStyle = '#37474f'; ctx.fillRect(-18, -12, 36, 24);
+        ctx.fillStyle = '#ff1744'; ctx.beginPath(); ctx.arc(18, 0, 5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+
+        if (step >= 2) {
+            document.getElementById('val-inc').innerText = incAngle;
+            document.getElementById('val-refrac').innerText = refracAngle;
+        }
+    }
+
+    // 마우스/터치 이벤트 (수정됨: 조작 편의성 극대화)
+    function handleStart(mx, my) {
+        if (step !== 2) return; 
+        // 레이저 본체를 정확히 누를 필요 없이, 레이저가 위치한 캔버스 상단(또는 하단) 영역 아무데나 터치해도 작동
+        if (!isReversed && my < CY) isDragging = true;
+        if (isReversed && my > CY) isDragging = true;
+    }
+
+    function handleMove(mx, my) {
+        if (!isDragging) return;
+        let dx = CX - mx; let dy = CY - my;
+        if ((!isReversed && dy > 0 && dx > 0) || (isReversed && dy < 0 && dx > 0)) {
+            let angleDeg = Math.round(Math.atan2(dx, Math.abs(dy)) * 180 / Math.PI);
+            let maxA = isReversed ? 65 : 80; 
+            if (angleDeg < 5) angleDeg = 5; if (angleDeg > maxA) angleDeg = maxA;
+            incAngle = angleDeg; draw();
+        }
+    }
+
+    function handleEnd() { isDragging = false; }
+
+    canvas.addEventListener('mousedown', (e) => { const rect = canvas.getBoundingClientRect(); handleStart(e.clientX - rect.left, e.clientY - rect.top); });
+    canvas.addEventListener('mousemove', (e) => { const rect = canvas.getBoundingClientRect(); handleMove(e.clientX - rect.left, e.clientY - rect.top); });
+    window.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('touchstart', (e) => { const rect = canvas.getBoundingClientRect(); handleStart(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top); });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); const rect = canvas.getBoundingClientRect(); handleMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top); }, {passive: false});
+    window.addEventListener('touchend', handleEnd);
+
+    // 퀴즈 처리
+    function checkQuiz() {
+        const inputs = [
+            { id: 'q-normal', mid: 'mark-normal', ans: '법선' },
+            { id: 'q-inc-ray', mid: 'mark-inc-ray', ans: '입사광선' },
+            { id: 'q-refrac-ray', mid: 'mark-refrac-ray', ans: '굴절광선' },
+            { id: 'q-inc-angle', mid: 'mark-inc-angle', ans: '입사각' },
+            { id: 'q-refrac-angle', mid: 'mark-refrac-angle', ans: '굴절각' }
+        ];
+        let allC = true;
+        inputs.forEach(item => {
+            const el = document.getElementById(item.id);
+            const mk = document.getElementById(item.mid);
+            if (el.value.replace(/\s+/g, '') === item.ans) {
+                el.style.borderColor = '#4caf50'; el.style.backgroundColor = '#e8f5e9';
+                mk.innerText = 'O'; mk.style.color = '#4caf50';
+            } else {
+                el.style.borderColor = '#f44336'; el.style.backgroundColor = '#ffebee';
+                mk.innerText = 'X'; mk.style.color = '#f44336'; allC = false;
+            }
+        });
+        if (allC) {
+            instruction.innerHTML = "<b style='color:#4caf50;'>🎉 정답입니다!</b> 실험 단계로 이동합니다.";
+            actionBtn.style.display = 'none';
+            setTimeout(startStep2, 1500);
+        }
+    }
+
+    function startStep2() {
+        step = 2; quizContainer.style.display = 'none'; 
+        statusBoard.style.display = 'flex'; toggleDirBtn.style.display = 'inline-block'; 
+        updateUI(); draw();
+    }
+
+    function toggleDirection() {
+        isReversed = !isReversed;
+        if (incAngle > 60) incAngle = 60;
+        updateUI(); draw();
+    }
+
+    function updateUI() {
+        stepTitle.innerText = "2단계: 굴절의 관계 확인";
+        let path = !isReversed ? "[공기 ➔ 물]" : "[물 ➔ 공기]";
+        instruction.innerHTML = `현재: <b>${path}</b> | <b>레이저가 있는 영역을 드래그</b>하여 각도의 변화를 관찰하세요.`;
+    }
+
+    draw();
+</script>
+</body>
+</html>
